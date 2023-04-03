@@ -1,4 +1,4 @@
-# to-do-app
+# ks-movies
 
 ## Project setup
 ```
