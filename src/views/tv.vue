@@ -1,18 +1,15 @@
 <template>
-  <thenav/>
-  <div>
-  <h2 class="text-grey text-h4  text-center">popular movies</h2>
-     
-      <div class="moviessearch">
+    <div>
+  <h2 class="text-grey  text-center">popular shows</h2>
+       <div class="moviessearch">
       <input v-model="movietext"    @keypress.enter="getmain()"  type="search" placeholder="search..">
       <i @click="getmain()" class="fa-solid fa-magnifying-glass"></i>      
       </div>
-
    <div class="mainbox">
     <div class="box" v-for="box in popular">
 
-    <router-link :to="{name:'movie' , params:{id: box.id}}">
-     <div class="image">
+    <router-link :to="{name:'show' , params:{id: box.id}}">
+     <div class="image" v-if="box.poster_path != null || box.poster_path != undefined ">
      <v-img :src="`https://image.tmdb.org/t/p/w500/${box.poster_path}`" alt="">
        <template v-slot:placeholder>
       <div class="d-flex align-center justify-center fill-height">
@@ -23,11 +20,14 @@
       </div>
     </template>
      </v-img>
-     </div>   
+     </div>
+       <div v-else>
+           <v-img src="https://via.placeholder.com/300x450"></v-img>
+         </div>    
     </router-link>
  
      <div class="textt">
-     <h4 class="text-h6 text-center pa-2 font-weight-bolder">{{ box.original_title }}</h4>
+     <h4 class="text-h6 text-center pa-2 font-weight-bolder">{{ box.original_name}}</h4>
      <div class="rate" style="display: flex; align-items: center; flex-direction: column; gap:10px;">
       <div class="stars">
       <i class="fa-solid fa-star"></i>
@@ -37,16 +37,16 @@
       </div>
       <p>{{ Math.floor(box.vote_average * 10)}}% | {{ box.release_date}}</p>
      </div>
-     <div class="geners">
-     <span>{{getGenres(...box.genre_ids)}}</span>     
-     </div> 
-     <v-btn @click="showAlert" color="indigo">add to favourite</v-btn>
+       <div style="display: flex; align-items: center; gap:3px; text-align: center;">
+     <span>{{ getGenres(...box.genre_ids) }}</span>
+     </div>
+     <v-btn @click="showAlert" color="indigo">add to favourite</v-btn> 
      </div>
    
     </div>
 
    </div>
- <div class="thebtnss">
+ <div class="thebtnss my-5">
             <v-btn class="mx-2" fab dark small color="error" v-on:click.prevent="previous()">
                <i class="fas fa-step-backward" style="font-size: 20px;"></i>            
             </v-btn>
@@ -56,7 +56,7 @@
             </v-btn>
          </div>
 
-     <h2 class="text-grey text-h4 my-5 text-center">top rated movies</h2>
+     <h2 class="text-grey text-center">top rated shows</h2>
      <div class="upcoming">
     <swiper
     :effect="'coverflow'"
@@ -79,21 +79,19 @@
     class="mySwiper"
   >
     <swiper-slide v-for="box in upcoming">
-      <router-link :to="{name:'movie' , params:{id: box.id}}">
-    <div class="image">
+      <router-link :to="{name:'show' , params:{id: box.id}}">
+    <div class="image" >
     <img :src="`https://image.tmdb.org/t/p/w500/${box.poster_path}`"  /> 
-                <span>{{ box.original_title }}</span>           
-      
+                <span>{{ box.name }}</span>           
+        
     </div>
-      </router-link>
+    </router-link>
     </swiper-slide >
   </swiper>    
      </div>
    
   </div>
-
-
-  </template>
+</template>
 
 <script>
 import { defineComponent } from 'vue';
@@ -107,18 +105,13 @@ import { EffectCoverflow, Pagination, Autoplay } from "swiper";
 
 import axios from 'axios';
 import { ref, onMounted } from 'vue'
-import { useStore } from 'vuex'
 import Swal from 'sweetalert2/dist/sweetalert2.js'
 import 'sweetalert2/src/sweetalert2.scss'
-import thenav from '../components/navbar.vue';
-import {useRoute} from 'vue-router'
 
 export default {
-  
   components: {
     Swiper,
     SwiperSlide,
-    thenav
   },
   setup() {
     let mainurl = ref('https://api.themoviedb.org/3/');
@@ -126,7 +119,46 @@ export default {
     let popular = ref([]);
     let upcoming = ref([]);
     let thepage = ref(1);
-    let genres = [
+
+    const getmain = async () => {
+      let result = await axios.get(`${mainurl.value}/discover/tv?sort_by=popularity.desc&${apiKey.value}&page=${thepage.value}`);
+      let result2 = await axios.get(`${mainurl.value}/tv/top_rated?${apiKey.value}&page=1`);
+       let result3 = await axios.get(`${mainurl.value}/search/tv?${apiKey.value}&query=${movietext.value}&page=${thepage.value}&include_adult=true`);
+      if (movietext.value == '') {
+        popular.value = result.data.results;  
+        console.log(result.data.results);      
+      } else {
+        popular.value = result3.data.results;          
+      }
+     
+
+       for (let i = 0; i < 15; i++){
+         upcoming.value.push(result2.data.results[i]);   
+       }
+            console.log(upcoming.value);
+    }
+    getmain();
+        const next = () => {
+      thepage.value = thepage.value + 1;
+      getmain();
+      window.scrollTo({
+        top: 0,
+        behavior:'smooth'
+      })
+    }
+    const previous = () => {
+      if (thepage.value == 1) {
+        return;
+      } else {
+         thepage.value = thepage.value - 1;
+      getmain();
+      window.scrollTo({
+        top: 0,
+        behavior:'smooth'
+      })
+      }
+    }
+      let genres = [
       {
         "id": 28,
         "name": "Action"
@@ -204,8 +236,6 @@ export default {
         "name": "Western"
       }
     ];
-    let store = useStore();
-    let router = useRoute();
 
     let movietext = ref('');
     
@@ -222,55 +252,7 @@ export default {
       });
       return all.join(',');
     }
-    
-
-    const getmain = async () => {
-    
-      let result = await axios.get(`${mainurl.value}/movie/popular?${apiKey.value}&include_adult=true&include_video=true&page=${thepage.value}`);
-      let result2 = await axios.get(`${mainurl.value}/movie/top_rated?${apiKey.value}&page=1`);
-      let result3 = await axios.get(`${mainurl.value}/search/movie?${apiKey.value}&query=${movietext.value}&page=${thepage.value}&include_adult=true`);
-       if (movietext.value == '') {
-       console.log('search input is empty');
-         popular.value = result.data.results;
-          console.log(result.data.results);     
-      } else {
-       console.log(result3.data.results); 
-       popular.value = result3.data.results;     
-      }
-     
-       for (let i = 0; i < 15; i++){
-         upcoming.value.push(result2.data.results[i]);   
-       }
-            console.log(upcoming.value);
-    }
-    getmain();
-
- 
-    
-        
-            const next = () => {
-        thepage.value = thepage.value + 1;
-          getmain();    
-      window.scrollTo({
-        top: 0,
-        behavior:'smooth'
-      })
-    }
-    const previous = () => {
-      if (thepage.value == 1) {
-        return;
-      } else {
-         thepage.value = thepage.value - 1;
-          getmain();    
-         
-      window.scrollTo({
-        top: 0,
-        behavior:'smooth'
-      })
-      }
-    }
-
-    const showAlert = () => {
+        const showAlert = () => {
 const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
@@ -308,153 +290,6 @@ Toast.fire({
 </script>
 
 <style lang="scss">
-.moviessearch{
-  background-color: #5c6bc0;
-  width: 90%;
-  margin: 20px auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 15px;
-  input{
-    width: 80%;
-    outline: none;
-    font-size: 20px;
-    color: #fff;
-    &::placeholder{
-      color: #fff;
-    }
-  }
-  i{
-    font-size: 20px;
-    color: #fff;
-    cursor: pointer;
-  }
-}
-.thebtnss{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 30px;
-}
-h2{
-  font-weight: bolder;
-  color: gray;
-  font-size: 30px;
-  margin-top: 100px;
-}
-.mainbox{
-  display:grid;
-  grid-template-columns: repeat( 3, 1fr);
-  gap: 20px;
-  width: 95%;
-   margin: 20px auto;
-  .box{
-    
-    margin: 20px 0px;
-    box-shadow: 5px 2px 10px 2px rgba(0, 0, 0, 0.289);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: 0.5s;
-    &:hover{
-      transform: translateY(-10px);
-    }
-    .stars{
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      i{
-        color: rgb(232, 232, 72);
-      }
-    }
-    
-    .image{
-      width: 100%;
-    
-    
-      img{
-        height: 100%;
-        width: 100%;
-        object-fit: cover;
-        border-top-left-radius: 20px;
-        border-top-right-radius: 20px;
-      }
-    }
-    .textt{
-      margin: 10px 0px;
-      padding: 5px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
-     .geners{
-      width: fit-content;
-      display: flex;
-      align-items: center;
-      flex-direction: column;
-      span{
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-      }
-     }
-    }
-  }
-}
 
-
-.upcoming{
-  margin: 50px 0px;
-  .swiper {
-  width: 95%;
- margin: 10px auto;
-}
-
-.swiper-slide {
-  background-position: center;
-  background-size: cover;
-  width: 500px;
-  height: 500px;
-  .image{
-    position: relative;
-    span{
-      cursor: pointer;
-      position: absolute;
-      background-color: #333333cd;
-      top: 60%;
-      width: 100%;
-      padding: 10px 0px;
-      text-align: center;
-      font-size: 20px;
-      color: #fff;
-    }
-  }
-}
-
-.swiper-slide img {
-  display: block;
-  width: 100%;
-}
-}
-
-@media(max-width:988px){
-  .mainbox{
- 
-    grid-template-columns: repeat(2 , 1fr);
-   
-  }
-}
-@media(max-width:770px){
-  .mainbox{
-    grid-template-columns: repeat(2 , 1fr);
-  }
-}
-@media(max-width:690px){
-  .mainbox{
-    width: 85%;
-    grid-template-columns: repeat(1 , 1fr);
-  }
-}
 
 </style>
